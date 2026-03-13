@@ -4,8 +4,8 @@ import { useAuth } from '@/components/AuthProvider';
 import ProfileDashboard from '@/components/ProfileDashboard';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot, collection, query, orderBy } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, signOut, auth } from '@/lib/firebase';
+import { api } from '@/lib/api';
+import { signOut, auth } from '@/lib/firebase';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -27,46 +27,29 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setProfile(docSnap.data());
+    const fetchData = async () => {
+      try {
+        const [profileData, milestonesData, projectsData, notesData, badgesData, activitiesData] = await Promise.all([
+          api.getUserProfile(user.uid),
+          api.getUserCollection(user.uid, 'milestones'),
+          api.getUserCollection(user.uid, 'projects'),
+          api.getUserCollection(user.uid, 'notes'),
+          api.getUserCollection(user.uid, 'badges'),
+          api.getUserCollection(user.uid, 'activities')
+        ]);
+
+        setProfile(profileData);
+        setMilestones(milestonesData);
+        setProjects(projectsData);
+        setNotes(notesData);
+        setBadges(badgesData);
+        setActivities(activitiesData);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
       }
-    }, (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}`));
-
-    const milestonesRef = collection(db, 'users', user.uid, 'milestones');
-    const unsubMilestones = onSnapshot(query(milestonesRef, orderBy('order', 'asc')), (snap) => {
-      setMilestones(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}/milestones`));
-
-    const projectsRef = collection(db, 'users', user.uid, 'projects');
-    const unsubProjects = onSnapshot(projectsRef, (snap) => {
-      setProjects(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}/projects`));
-
-    const notesRef = collection(db, 'users', user.uid, 'notes');
-    const unsubNotes = onSnapshot(notesRef, (snap) => {
-      setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}/notes`));
-
-    const badgesRef = collection(db, 'users', user.uid, 'badges');
-    const unsubBadges = onSnapshot(badgesRef, (snap) => {
-      setBadges(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}/badges`));
-
-    const activitiesRef = collection(db, 'users', user.uid, 'activities');
-    const unsubActivities = onSnapshot(query(activitiesRef, orderBy('timestamp', 'desc')), (snap) => {
-      setActivities(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (e) => handleFirestoreError(e, OperationType.GET, `users/${user.uid}/activities`));
-
-    return () => {
-      unsubProfile();
-      unsubMilestones();
-      unsubProjects();
-      unsubNotes();
-      unsubBadges();
-      unsubActivities();
     };
+
+    fetchData();
   }, [user]);
 
   const handleLogout = async () => {
