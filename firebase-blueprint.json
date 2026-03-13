@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user personal information and career goals.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "displayName": { "type": "string", "description": "The user's full name." },
+        "photoURL": { "type": "string", "description": "URL to the user's profile picture." },
+        "year": { "type": "string", "description": "Academic year (e.g., 3rd Year)." },
+        "focus": { "type": "string", "description": "Primary area of focus." },
+        "joinedDate": { "type": "string", "description": "Date the user joined." },
+        "careerGoal": { "type": "string", "description": "The user's primary career goal." },
+        "targetDate": { "type": "string", "description": "Target date for the career goal." },
+        "currentPath": { "type": "string", "description": "Current learning path title." },
+        "progress": { "type": "number", "description": "Overall progress percentage." }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "Milestone": {
+      "title": "Milestone",
+      "description": "A specific learning milestone in a path.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["completed", "in-progress", "locked"] },
+        "date": { "type": "string", "description": "Completion date if applicable." },
+        "order": { "type": "integer" }
+      },
+      "required": ["title", "status"]
+    },
+    "ProjectIdea": {
+      "title": "Project Idea",
+      "description": "A project idea saved by the user.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "InterviewNote": {
+      "title": "Interview Note",
+      "description": "A note for interview preparation.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" }
+      },
+      "required": ["title"]
+    },
+    "Badge": {
+      "title": "Badge",
+      "description": "A badge earned by the user.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "icon": { "type": "string" },
+        "earned": { "type": "boolean" }
+      },
+      "required": ["title", "icon", "earned"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A log of user activity.",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["description", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document."
+    },
+    "/users/{userId}/milestones/{milestoneId}": {
+      "schema": "Milestone",
+      "description": "Milestones for the user."
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "ProjectIdea",
+      "description": "Project ideas for the user."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "InterviewNote",
+      "description": "Interview notes for the user."
+    },
+    "/users/{userId}/badges/{badgeId}": {
+      "schema": "Badge",
+      "description": "Badges earned by the user."
+    },
+    "/users/{userId}/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Activity logs for the user."
+    }
+  }
+}

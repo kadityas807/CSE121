@@ -1,0 +1,139 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - displayName: string (required)
+    //   - photoURL: string (optional)
+    //   - year: string (optional)
+    //   - focus: string (optional)
+    //   - joinedDate: string (optional)
+    //   - careerGoal: string (optional)
+    //   - targetDate: string (optional)
+    //   - currentPath: string (optional)
+    //   - progress: number (optional)
+    //
+    // Collection: /users/{userId}/milestones/{milestoneId}
+    // Fields:
+    //   - title: string (required)
+    //   - status: string (required, enum: ['completed', 'in-progress', 'locked'])
+    //   - date: string (optional)
+    //   - order: number (optional)
+    //
+    // [Other subcollections follow similar patterns of ownership]
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "kadityapratap807@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUserProfile(data) {
+      return hasRequiredFields(['uid', 'displayName']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             (!('year' in data) || (data.year is string && data.year.size() < 50)) &&
+             (!('focus' in data) || (data.focus is string && data.focus.size() < 100)) &&
+             (!('careerGoal' in data) || (data.careerGoal is string && data.careerGoal.size() < 100)) &&
+             (!('currentPath' in data) || (data.currentPath is string && data.currentPath.size() < 100)) &&
+             (!('onboardingCompleted' in data) || (data.onboardingCompleted is bool)) &&
+             (!('progress' in data) || (data.progress is number && data.progress >= 0 && data.progress <= 100));
+    }
+
+    function isValidMilestone(data) {
+      return hasRequiredFields(['title', 'status']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.status in ['completed', 'in-progress', 'locked'];
+    }
+
+    function isValidProject(data) {
+      return hasRequiredFields(['title']) &&
+             data.title is string && data.title.size() < 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() < 1000));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow delete: if isAdmin();
+
+      match /milestones/{milestoneId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidMilestone(request.resource.data);
+        allow update: if isOwner(userId) && isValidMilestone(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /projects/{projectId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidProject(request.resource.data);
+        allow update: if isOwner(userId) && isValidProject(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /notes/{noteId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      match /badges/{badgeId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) || isAdmin();
+        allow update: if isOwner(userId) || isAdmin();
+        allow delete: if isAdmin();
+      }
+
+      match /completedSteps/{stepId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /activities/{activityId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+  }
+}
