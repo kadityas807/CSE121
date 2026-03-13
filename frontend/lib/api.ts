@@ -1,6 +1,7 @@
 import { auth } from './firebase';
 
-const BASE_URL = 'http://localhost:5000/api';
+// Replace with your live Vercel backend URL after deployment
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 async function getHeaders() {
   const user = auth.currentUser;
